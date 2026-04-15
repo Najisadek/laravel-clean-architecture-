@@ -5,72 +5,37 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence;
 
 use App\Domain\User\Contracts\UserRepositoryInterface;
-use App\Domain\User\User;
-use App\Domain\User\ValueObjects\Email;
-use App\Domain\User\ValueObjects\Password;
-use App\Domain\User\ValueObjects\UserId;
+use App\Domain\User\User as DomainUser;
 use App\Models\User as UserModel;
-use DateTimeImmutable;
 
-/**
- * Eloquent User Repository
- *
- * Implements the repository interface using Laravel Eloquent.
- */
 final class EloquentUserRepository implements UserRepositoryInterface
 {
-    public function findById(UserId $id): ?User
+    public function findById(string $id): ?DomainUser
     {
-        $model = UserModel::find($id->value());
+        $model = UserModel::find($id);
 
-        return $model ? $this->toEntity($model) : null;
+        return $model ? DomainUser::fromModel($model) : null;
     }
 
-    public function findByEmail(Email $email): ?User
+    public function findByEmail(string $email): ?DomainUser
     {
-        $model = UserModel::where('email', $email->value())->first();
+        $model = UserModel::where('email', strtolower($email))->first();
 
-        return $model ? $this->toEntity($model) : null;
+        return $model ? DomainUser::fromModel($model) : null;
     }
 
-    public function existsByEmail(Email $email): bool
+    public function existsByEmail(string $email): bool
     {
-        return UserModel::where('email', $email->value())->exists();
+        return UserModel::where('email', strtolower($email))->exists();
     }
 
-    public function save(User $user): void
+    public function save(DomainUser $user): void
     {
-        UserModel::updateOrCreate(
-            ['id' => $user->id()->value()],
-            [
-                'name' => $user->name(),
-                'email' => $user->email()->value(),
-                'password' => $user->password()->hashedValue(),
-                'created_at' => $user->createdAt(),
-                'updated_at' => $user->updatedAt(),
-            ]
-        );
+        $user->getModel()->save();
     }
 
-    public function delete(UserId $id): void
+    public function delete(string $id): void
     {
-        UserModel::where('id', $id->value())->delete();
-    }
-
-    /**
-     * Convert Eloquent model to Domain entity
-     */
-    private function toEntity(UserModel $model): User
-    {
-        $password = new Password($model->password, true);
-
-        return new User(
-            new UserId($model->id),
-            $model->name,
-            new Email($model->email),
-            $password,
-            new DateTimeImmutable($model->created_at->toDateTimeString()),
-            $model->updated_at ? new DateTimeImmutable($model->updated_at->toDateTimeString()) : null
-        );
+        UserModel::where('id', $id)->delete();
     }
 }
