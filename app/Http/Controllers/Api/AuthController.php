@@ -2,21 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Application\User\Actions\LoginUser;
-use App\Application\User\Actions\LogoutUser;
-use App\Application\User\Actions\RegisterUser;
-use App\Application\User\DTOs\LoginUserDTO;
-use App\Application\User\DTOs\RegisterUserDTO;
-use App\Domain\User\Exceptions\EmailAlreadyExistsException;
-use App\Domain\User\Exceptions\InvalidCredentialsException;
-use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\RegisterRequest;
+use App\Domain\User\Exceptions\{EmailAlreadyExistsException, InvalidCredentialsException};
+use App\Application\User\Actions\{LoginUser, LogoutUser, RegisterUser};
+use App\Application\User\DTOs\{LoginUserDTO, RegisterUserDTO};
+use App\Http\Requests\Auth\{LoginRequest, RegisterRequest};
 use App\Http\Resources\UserResource;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class AuthController extends Controller
+final class AuthController extends Controller
 {
     public function __construct(
         private readonly RegisterUser $registerUser,
