@@ -6,8 +6,8 @@ namespace App\Application\User\Actions;
 
 use App\Domain\User\Contracts\UserRepositoryInterface;
 use App\Domain\User\Exceptions\UserNotFoundException;
+use App\Application\User\DTOs\UserResponseDTO;
 use App\Domain\User\ValueObjects\UserId;
-use App\Application\User\DTOs\UserDTO;
 
 /**
  * Get User By ID Action
@@ -25,7 +25,7 @@ final class GetUserById
      *
      * @throws UserNotFoundException
      */
-    public function execute(string $id): UserDTO
+    public function execute(string $id): UserResponseDTO
     {
         $user = $this->repository->findById(new UserId($id));
 
@@ -33,6 +33,11 @@ final class GetUserById
             throw new UserNotFoundException;
         }
 
-        return UserDTO::fromEntity($user);
+        return new UserResponseDTO(
+            id: $user->id()->value(),
+            name: $user->name(),
+            email: $user->email()->value(),
+            createdAt: $user->createdAt()->format('Y-m-d H:i:s')
+        );
     }
 }
