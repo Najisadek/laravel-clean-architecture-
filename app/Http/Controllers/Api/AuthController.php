@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Domain\User\Exceptions\{EmailAlreadyExistsException, InvalidCredentialsException};
-use App\Application\User\Actions\{LoginUser, LogoutUser, RegisterUser};
-use App\Application\User\DTOs\{LoginUserDTO, RegisterUserDTO};
-use App\Http\Requests\Auth\{LoginRequest, RegisterRequest};
-use App\Http\Resources\UserResource;
+use App\Application\User\Actions\LoginUser;
+use App\Application\User\Actions\LogoutUser;
+use App\Application\User\Actions\RegisterUser;
+use App\Application\User\DTOs\LoginUserDTO;
+use App\Application\User\DTOs\RegisterUserDTO;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,9 +22,6 @@ final class AuthController extends Controller
         private readonly LogoutUser $logoutUser
     ) {}
 
-    /**
-     * Register a new user
-     */
     public function register(RegisterRequest $request): JsonResponse
     {
         try {
@@ -31,11 +31,7 @@ final class AuthController extends Controller
             return (new UserResource($user))
                 ->response()
                 ->setStatusCode(201);
-        } catch (EmailAlreadyExistsException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Email already exists',
-            ], 409);
+
         } catch (\Exception $e) {
             report($e);
 
@@ -46,9 +42,6 @@ final class AuthController extends Controller
         }
     }
 
-    /**
-     * Login user and create token
-     */
     public function login(LoginRequest $request): JsonResponse
     {
         try {
@@ -57,11 +50,6 @@ final class AuthController extends Controller
             $token = $this->loginUser->generateToken($user);
 
             return (new UserResource($user))->additional(['meta' => ['token' => $token]])->response();
-        } catch (InvalidCredentialsException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid credentials',
-            ], 401);
         } catch (\Exception $e) {
             report($e);
 
@@ -72,22 +60,19 @@ final class AuthController extends Controller
         }
     }
 
-    /**
-     * Logout user and revoke token
-     */
     public function logout(Request $request): JsonResponse
     {
         try {
-            $token = $request->bearerToken();
+            $user = $request->user();
 
-            if (! $token) {
+            if (! $user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'No token provided',
+                    'message' => 'Unauthenticated',
                 ], 401);
             }
 
-            $this->logoutUser->execute($token);
+            $this->logoutUser->execute($user);
 
             return response()->json([
                 'success' => true,

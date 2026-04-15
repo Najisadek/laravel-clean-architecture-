@@ -4,145 +4,83 @@ declare(strict_types=1);
 
 namespace App\Domain\User;
 
-use App\Domain\User\ValueObjects\Email;
-use App\Domain\User\ValueObjects\Password;
-use App\Domain\User\ValueObjects\UserId;
-use DateTimeImmutable;
+use App\Models\User as UserModel;
 
-/**
- * User Domain Entity
- *
- * Represents the core user concept in our domain.
- * Contains business logic and invariants.
- */
 final class User
 {
-    private UserId $id;
+    public function __construct(private UserModel $model) {}
 
-    private string $name;
-
-    private Email $email;
-
-    private Password $password;
-
-    private DateTimeImmutable $createdAt;
-
-    private ?DateTimeImmutable $updatedAt;
-
-    public function __construct(
-        UserId $id,
-        string $name,
-        Email $email,
-        Password $password,
-        ?DateTimeImmutable $createdAt = null,
-        ?DateTimeImmutable $updatedAt = null
-    ) {
-        $this->id = $id;
-        $this->name = $name;
-        $this->email = $email;
-        $this->password = $password;
-        $this->createdAt = $createdAt ?? now();
-        $this->updatedAt = $updatedAt;
-    }
-
-    /**
-     * Factory method for creating a new user
-     */
-    public static function create(
-        string $name,
-        Email $email,
-        Password $password
-    ): self {
-        return new self(
-            new UserId,
-            $name,
-            $email,
-            $password
-        );
-    }
-
-    // Getters
-    public function id(): UserId
+    public static function create(string $name, string $email, string $password): self
     {
-        return $this->id;
+        $model = UserModel::create([
+            'name' => $name,
+            'email' => strtolower($email),
+            'password' => $password,
+        ]);
+
+        return new self($model);
+    }
+
+    public static function fromModel(UserModel $model): self
+    {
+        return new self($model);
+    }
+
+    public function id(): string
+    {
+        return $this->model->id;
     }
 
     public function name(): string
     {
-        return $this->name;
+        return $this->model->name;
     }
 
-    public function email(): Email
+    public function email(): string
     {
-        return $this->email;
+        return $this->model->email;
     }
 
-    public function password(): Password
+    public function password(): string
     {
-        return $this->password;
+        return $this->model->password;
     }
 
-    public function createdAt(): DateTimeImmutable
+    public function createdAt(): \DateTimeInterface
     {
-        return $this->createdAt;
+        return $this->model->created_at;
     }
 
-    public function updatedAt(): ?DateTimeImmutable
+    public function updatedAt(): ?\DateTimeInterface
     {
-        return $this->updatedAt;
+        return $this->model->updated_at;
     }
 
-    /**
-     * Update user name
-     */
     public function updateName(string $name): void
     {
-        $this->name = $name;
-        $this->markAsUpdated();
+        $this->model->name = $name;
+        $this->model->save();
     }
 
-    /**
-     * Update email address
-     */
-    public function updateEmail(Email $email): void
+    public function updateEmail(string $email): void
     {
-        $this->email = $email;
-        $this->markAsUpdated();
+        $this->model->email = strtolower($email);
+        $this->model->save();
     }
 
-    /**
-     * Update password
-     */
-    public function updatePassword(Password $password): void
+    public function getModel(): UserModel
     {
-        $this->password = $password;
-        $this->markAsUpdated();
+        return $this->model;
     }
 
-    /**
-     * Verify password against plain text
-     */
-    public function verifyPassword(string $plainPassword, callable $hashVerifier): bool
-    {
-        return $hashVerifier($plainPassword, $this->password->hashedValue());
-    }
-
-    /**
-     * Convert to array for serialization
-     */
     public function toArray(): array
     {
         return [
-            'id' => $this->id->value(),
-            'name' => $this->name,
-            'email' => $this->email->value(),
-            'created_at' => $this->createdAt->format('Y-m-d H:i:s'),
-            'updated_at' => $this->updatedAt?->format('Y-m-d H:i:s'),
+            'id' => $this->id(),
+            'name' => $this->name(),
+            'email' => $this->email(),
+            'created_at' => $this->createdAt()->format('Y-m-d H:i:s'),
+            'updated_at' => $this->updatedAt()?->format('Y-m-d H:i:s'),
         ];
-    }
-
-    private function markAsUpdated(): void
-    {
-        $this->updatedAt = new DateTimeImmutable;
     }
 }
