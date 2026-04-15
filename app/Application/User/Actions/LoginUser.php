@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Application\User\Actions;
 
-use App\Application\User\DTOs\LoginUserDTO;
-use App\Application\User\DTOs\UserResponseDTO;
+use App\Domain\User\Exceptions\InvalidCredentialsException;
 use App\Domain\User\Contracts\PasswordHasherInterface;
 use App\Domain\User\Contracts\TokenGeneratorInterface;
 use App\Domain\User\Contracts\UserRepositoryInterface;
-use App\Domain\User\Exceptions\InvalidCredentialsException;
+use App\Application\User\DTOs\LoginUserDTO;
 use App\Domain\User\ValueObjects\Email;
+use App\Domain\User\User;
 
 /**
  * Login User Action
  *
  * Handles user authentication use case.
+ * Returns the Domain Entity.
  */
 final class LoginUser
 {
@@ -30,7 +31,7 @@ final class LoginUser
      *
      * @throws InvalidCredentialsException
      */
-    public function execute(LoginUserDTO $dto): UserResponseDTO
+    public function execute(LoginUserDTO $dto): User
     {
         $email = new Email($dto->email);
         $user = $this->repository->findByEmail($email);
@@ -39,23 +40,21 @@ final class LoginUser
             throw new InvalidCredentialsException;
         }
 
-        // Verify password
         if (! $user->verifyPassword($dto->password, [$this->hasher, 'verify'])) {
             throw new InvalidCredentialsException;
         }
 
-        // Generate authentication token
-        $token = $this->tokenGenerator->generate([
+        return $user;
+    }
+
+    /**
+     * Generate token for authenticated user
+     */
+    public function generateToken(User $user): string
+    {
+        return $this->tokenGenerator->generate([
             'user_id' => $user->id()->value(),
             'email' => $user->email()->value(),
         ]);
-
-        return new UserResponseDTO(
-            id: $user->id()->value(),
-            name: $user->name(),
-            email: $user->email()->value(),
-            createdAt: $user->createdAt()->format('Y-m-d H:i:s'),
-            token: $token
-        );
     }
 }

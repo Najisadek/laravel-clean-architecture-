@@ -2,24 +2,32 @@
 
 namespace App\Http\Resources;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * User Resource (JSON:API format)
+ */
 class UserResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
-    public function toArray(Request $request): array
+    public function toArray($request): array
     {
         return [
-            'id' => $this->resource['id'] ?? null,
-            'name' => $this->resource['name'] ?? null,
-            'email' => $this->resource['email'] ?? null,
-            'created_at' => $this->resource['created_at'] ?? null,
-            'token' => $this->resource['token'] ?? null,
+            'id' => (string) $this->resource->id(),
+            'type' => 'users',
+            'attributes' => [
+                'name' => $this->resource->name(),
+                'email' => (string) $this->resource->email(),
+                'created_at' => $this->resource->createdAt()->format('Y-m-d H:i:s'),
+            ],
+        ];
+    }
+
+    public function with($request): array
+    {
+        return [
+            'meta' => [
+                'token' => $this->additional['token'] ?? null,
+            ],
         ];
     }
 }

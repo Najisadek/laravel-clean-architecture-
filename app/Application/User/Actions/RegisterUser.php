@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Application\User\Actions;
 
 use App\Application\User\DTOs\RegisterUserDTO;
-use App\Application\User\DTOs\UserResponseDTO;
 use App\Domain\User\Contracts\PasswordHasherInterface;
 use App\Domain\User\Contracts\UserRepositoryInterface;
 use App\Domain\User\Exceptions\EmailAlreadyExistsException;
@@ -17,6 +16,7 @@ use App\Domain\User\ValueObjects\Password;
  * Register User Action
  *
  * Handles user registration use case.
+ * Returns the Domain Entity.
  */
 final class RegisterUser
 {
@@ -30,34 +30,25 @@ final class RegisterUser
      *
      * @throws EmailAlreadyExistsException
      */
-    public function execute(RegisterUserDTO $dto): UserResponseDTO
+    public function execute(RegisterUserDTO $dto): User
     {
         $email = new Email($dto->email);
 
-        // Check if email already exists
         if ($this->repository->existsByEmail($email)) {
             throw new EmailAlreadyExistsException;
         }
 
-        // Create domain user entity
         $user = User::create(
             name: $dto->name,
             email: $email,
             password: new Password($dto->password)
         );
 
-        // Hash password and set it on entity
         $hashedPassword = $this->hasher->hash($dto->password);
         $user->password()->setHashedValue($hashedPassword);
 
-        // Persist user
         $this->repository->save($user);
 
-        return new UserResponseDTO(
-            id: $user->id()->value(),
-            name: $user->name(),
-            email: $user->email()->value(),
-            createdAt: $user->createdAt()->format('Y-m-d H:i:s')
-        );
+        return $user;
     }
 }

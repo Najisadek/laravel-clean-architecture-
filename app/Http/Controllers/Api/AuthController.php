@@ -33,23 +33,21 @@ class AuthController extends Controller
             $dto = RegisterUserDTO::fromArray($request->validated());
             $user = $this->registerUser->execute($dto);
 
-            return $this->success(
-                data: (new UserResource($user->toArray()))->response()->getData(true)['data'],
-                message: 'User registered successfully',
-                code: 201
-            );
+            return (new UserResource($user))
+                ->response()
+                ->setStatusCode(201);
         } catch (EmailAlreadyExistsException $e) {
-            return $this->error(
-                message: 'Email already exists',
-                code: 409
-            );
+            return response()->json([
+                'success' => false,
+                'message' => 'Email already exists',
+            ], 409);
         } catch (\Exception $e) {
             report($e);
 
-            return $this->error(
-                message: 'Registration failed',
-                code: 500
-            );
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration failed',
+            ], 500);
         }
     }
 
@@ -61,24 +59,21 @@ class AuthController extends Controller
         try {
             $dto = LoginUserDTO::fromArray($request->validated());
             $user = $this->loginUser->execute($dto);
+            $token = $this->loginUser->generateToken($user);
 
-            return $this->success(
-                data: (new UserResource($user->toArray()))->response()->getData(true)['data'],
-                message: 'Login successful',
-                code: 200
-            );
+            return (new UserResource($user))->additional(['meta' => ['token' => $token]])->response();
         } catch (InvalidCredentialsException $e) {
-            return $this->error(
-                message: 'Invalid credentials',
-                code: 401
-            );
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid credentials',
+            ], 401);
         } catch (\Exception $e) {
             report($e);
 
-            return $this->error(
-                message: 'Login failed',
-                code: 500
-            );
+            return response()->json([
+                'success' => false,
+                'message' => 'Login failed',
+            ], 500);
         }
     }
 
@@ -91,25 +86,25 @@ class AuthController extends Controller
             $token = $request->bearerToken();
 
             if (! $token) {
-                return $this->error(
-                    message: 'No token provided',
-                    code: 401
-                );
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No token provided',
+                ], 401);
             }
 
             $this->logoutUser->execute($token);
 
-            return $this->success(
-                data: [],
-                message: 'Successfully logged out'
-            );
+            return response()->json([
+                'success' => true,
+                'message' => 'Successfully logged out',
+            ]);
         } catch (\Exception $e) {
             report($e);
 
-            return $this->error(
-                message: 'Logout failed',
-                code: 500
-            );
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed',
+            ], 500);
         }
     }
 }
